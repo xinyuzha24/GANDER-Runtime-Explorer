@@ -1,0 +1,1228 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>GANDER · Agent Orchestration Runtime 动态演示</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --sub: #56627a;
+      --muted: #8792a8;
+      --line: #d8deea;
+      --canvas: #f5f7fb;
+      --paper: #ffffff;
+      --blue: #2c64e8;
+      --blue-soft: #edf3ff;
+      --teal: #087f78;
+      --teal-soft: #e9faf7;
+      --purple: #6d3de7;
+      --purple-soft: #f1edff;
+      --orange: #d85b18;
+      --orange-soft: #fff3e9;
+      --red: #d63644;
+      --red-soft: #fff0f2;
+      --green: #14834f;
+      --green-soft: #eaf8f0;
+      --amber: #a66300;
+      --amber-soft: #fff7dd;
+      --shadow: 0 16px 42px rgba(36, 47, 73, .09);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% -10%, rgba(44,100,232,.11), transparent 30rem),
+        radial-gradient(circle at 95% 6%, rgba(8,127,120,.09), transparent 28rem),
+        var(--canvas);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+
+    button { font: inherit; }
+    button:focus-visible {
+      outline: 3px solid rgba(44,100,232,.25);
+      outline-offset: 3px;
+    }
+    code, pre {
+      font-family: Consolas, "SFMono-Regular", ui-monospace, monospace;
+    }
+    code {
+      padding: .08em .3em;
+      border-radius: 5px;
+      color: #314064;
+      background: rgba(106, 123, 158, .1);
+    }
+
+    .app-shell { max-width: 1680px; margin: 0 auto; padding: 18px 24px 48px; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 4px 2px 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 13px;
+      color: white;
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(145deg, #1f64ee, #0c8a83);
+      box-shadow: 0 10px 24px rgba(44,100,232,.22);
+    }
+    .brand strong { display: block; letter-spacing: .02em; }
+    .source-tag {
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--sub);
+      background: rgba(255,255,255,.72);
+      font-size: 12px;
+    }
+
+    .demo {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    .control-deck {
+      position: sticky;
+      z-index: 20;
+      top: 0;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line);
+      border-radius: 24px 24px 0 0;
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(12px);
+    }
+    .progress-copy {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--sub);
+      font-size: 12px;
+    }
+    .progress-copy strong { color: var(--ink); font-size: 13px; }
+    .progress-track {
+      overflow: hidden;
+      height: 7px;
+      border-radius: 999px;
+      background: #e9edf4;
+    }
+    .progress-track span {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--teal));
+      transition: width .35s ease;
+    }
+    .control-buttons { display: flex; align-items: center; gap: 8px; }
+    .control-button {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: var(--ink);
+      background: white;
+      cursor: pointer;
+      transition: transform .15s, border-color .15s, background .15s;
+    }
+    .control-button:hover:not(:disabled) { transform: translateY(-1px); border-color: #aeb9cb; }
+    .control-button:disabled { opacity: .38; cursor: not-allowed; }
+    .control-button.primary {
+      border-color: var(--blue);
+      color: white;
+      background: var(--blue);
+    }
+    .control-button.icon { width: 40px; padding: 0; font-size: 18px; }
+    .control-button[data-active="true"] { border-color: var(--teal); color: var(--teal); background: var(--teal-soft); }
+
+    .timeline-wrap {
+      overflow-x: auto;
+      padding: 18px 18px 8px;
+      scrollbar-width: thin;
+    }
+    .timeline {
+      position: relative;
+      display: flex;
+      min-width: 1180px;
+      gap: 0;
+      padding: 0 6px;
+    }
+    .timeline::before {
+      position: absolute;
+      top: 16px;
+      right: 32px;
+      left: 32px;
+      height: 2px;
+      background: #e3e7ef;
+      content: "";
+    }
+    .timeline-step {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      min-width: 92px;
+      padding: 0 5px;
+      border: 0;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      text-align: center;
+    }
+    .timeline-step .dot {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 8px;
+      place-items: center;
+      border: 2px solid #d7dce6;
+      border-radius: 50%;
+      color: var(--muted);
+      background: white;
+      font-size: 11px;
+      font-weight: 800;
+      transition: .25s ease;
+    }
+    .timeline-step span:last-child {
+      display: block;
+      font-size: 11px;
+      line-height: 1.25;
+    }
+    .timeline-step.done .dot { border-color: var(--green); color: white; background: var(--green); }
+    .timeline-step.active { color: var(--ink); font-weight: 700; }
+    .timeline-step.active .dot {
+      border-color: var(--blue);
+      color: white;
+      background: var(--blue);
+      box-shadow: 0 0 0 6px rgba(44,100,232,.12);
+      transform: scale(1.08);
+    }
+
+    .stage-grid {
+      display: grid;
+      grid-template-columns: minmax(760px, 1.55fr) minmax(340px, .55fr);
+      gap: 16px;
+      padding: 12px 18px 18px;
+    }
+    .map-card, .inspector, .state-panel, .log-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+    }
+    .map-card { min-width: 0; overflow: hidden; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-head h2, .panel-head h3 { margin: 0; font-size: 15px; }
+    .legend { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--sub); font-size: 11px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-line { width: 24px; height: 2px; background: #77849a; }
+    .legend-line.control {
+      background: repeating-linear-gradient(90deg, #77849a 0 6px, transparent 6px 10px);
+    }
+    .legend-line.on { height: 3px; background: var(--blue); }
+    .legend-line.control.on {
+      background: repeating-linear-gradient(90deg, var(--teal) 0 6px, transparent 6px 10px);
+    }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 4px var(--blue-soft); }
+    .map-scroll { overflow-x: auto; padding: 14px; background: #fafbfe; }
+    .architecture {
+      position: relative;
+      width: 1200px;
+      height: 660px;
+      margin: 0 auto;
+      border: 1px solid #e6eaf1;
+      border-radius: 16px;
+      background:
+        linear-gradient(rgba(62,78,111,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(62,78,111,.035) 1px, transparent 1px),
+        white;
+      background-size: 24px 24px;
+    }
+    .zone {
+      position: absolute;
+      z-index: 0;
+      border: 1px solid;
+      border-radius: 16px;
+      pointer-events: none;
+    }
+    .zone-title {
+      position: absolute;
+      top: 13px;
+      left: 15px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+    .zone small {
+      position: absolute;
+      top: 32px;
+      left: 15px;
+      color: var(--sub);
+      font-size: 10px;
+    }
+    .zone-user { left: 18px; top: 68px; width: 155px; height: 520px; border-color: #ccd3df; background: rgba(240,243,248,.78); }
+    .zone-front { left: 197px; top: 30px; width: 242px; height: 590px; border-color: rgba(44,100,232,.42); background: rgba(237,243,255,.72); color: var(--blue); }
+    .zone-runtime { left: 465px; top: 20px; width: 440px; height: 620px; border-color: rgba(8,127,120,.42); background: rgba(233,250,247,.55); color: var(--teal); }
+    .zone-brain { left: 933px; top: 48px; width: 248px; height: 560px; border-color: rgba(216,91,24,.42); background: rgba(255,243,233,.72); color: var(--orange); }
+    .plane-label {
+      position: absolute;
+      z-index: 2;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: var(--sub);
+      background: rgba(255,255,255,.9);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .plane-realtime { left: 483px; top: 72px; }
+    .plane-control { left: 483px; top: 198px; }
+
+    .arch-node {
+      position: absolute;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 9px 11px;
+      border: 1px solid #ccd3df;
+      border-radius: 11px;
+      color: var(--ink);
+      background: rgba(255,255,255,.97);
+      box-shadow: 0 5px 14px rgba(37,49,75,.07);
+      cursor: pointer;
+      text-align: left;
+      transition: opacity .2s, transform .2s, border-color .2s, box-shadow .2s;
+    }
+    .arch-node strong { display: block; font-size: 12px; line-height: 1.25; }
+    .arch-node span { display: block; margin-top: 3px; color: var(--sub); font-size: 9px; line-height: 1.3; }
+    .arch-node[data-kind="front"] { border-color: rgba(44,100,232,.42); }
+    .arch-node[data-kind="runtime"] { border-color: rgba(8,127,120,.42); }
+    .arch-node[data-kind="store"] { border-color: rgba(109,61,231,.42); }
+    .arch-node[data-kind="brain"] { border-color: rgba(216,91,24,.42); }
+    .arch-node[data-kind="user"] { border-color: #c7cfdd; }
+    .arch-node.dim { opacity: .33; filter: saturate(.6); }
+    /* 步骤内的编号徽标：让右侧文字的第 N 步能对上左侧亮块 */
+    .arch-node[data-badge]::before {
+      position: absolute;
+      top: -9px;
+      right: -9px;
+      display: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      color: white;
+      background: var(--node-color, var(--blue));
+      box-shadow: 0 2px 6px rgba(32,43,66,.28);
+      content: attr(data-badge);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 20px;
+      text-align: center;
+      pointer-events: none;
+    }
+    .arch-node.active[data-badge]::before { display: block; }
+    .arch-node.active {
+      z-index: 6;
+      border-color: var(--node-color, var(--blue));
+      background: var(--node-soft, var(--blue-soft));
+      box-shadow: 0 0 0 3px var(--node-ring, rgba(44,100,232,.12)), 0 12px 22px rgba(32,43,66,.12);
+      transform: translateY(-2px);
+    }
+    .arch-node.pulse::after {
+      position: absolute;
+      inset: -5px;
+      border: 2px solid var(--node-color, var(--blue));
+      border-radius: 14px;
+      content: "";
+      animation: nodePulse 1.6s ease-out infinite;
+      pointer-events: none;
+    }
+    @keyframes nodePulse {
+      0% { opacity: .55; transform: scale(.98); }
+      100% { opacity: 0; transform: scale(1.08); }
+    }
+    .node-user { --node-color: #66758d; --node-soft: #f0f3f8; --node-ring: rgba(102,117,141,.13); }
+    .node-front { --node-color: var(--blue); --node-soft: var(--blue-soft); --node-ring: rgba(44,100,232,.13); }
+    .node-runtime { --node-color: var(--teal); --node-soft: var(--teal-soft); --node-ring: rgba(8,127,120,.13); }
+    .node-store { --node-color: var(--purple); --node-soft: var(--purple-soft); --node-ring: rgba(109,61,231,.13); }
+    .node-brain { --node-color: var(--orange); --node-soft: var(--orange-soft); --node-ring: rgba(216,91,24,.13); }
+
+    #node-voice { left: 34px; top: 150px; width: 123px; height: 70px; }
+    #node-screen { left: 34px; top: 245px; width: 123px; height: 66px; }
+    #node-userui { left: 34px; top: 464px; width: 123px; height: 78px; }
+    #node-thinker { left: 220px; top: 130px; width: 194px; height: 156px; }
+    #node-talker { left: 220px; top: 390px; width: 194px; height: 90px; }
+    #node-transport { left: 488px; top: 90px; width: 166px; height: 80px; }
+    #node-asr { left: 690px; top: 90px; width: 184px; height: 80px; }
+    #node-bridge { left: 488px; top: 220px; width: 386px; height: 76px; }
+    #node-gateway { left: 488px; top: 342px; width: 174px; height: 98px; }
+    #node-ledger { left: 700px; top: 342px; width: 174px; height: 98px; }
+    #node-router { left: 488px; top: 500px; width: 174px; height: 82px; }
+    #node-delivery { left: 700px; top: 500px; width: 174px; height: 82px; }
+    #node-provider { left: 958px; top: 134px; width: 198px; height: 88px; }
+    #node-worker { left: 958px; top: 288px; width: 198px; height: 120px; }
+    #node-tools { left: 958px; top: 476px; width: 198px; height: 84px; }
+
+    .flow-layer { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .flow {
+      fill: none;
+      stroke: #c7ceda;
+      stroke-width: 2;
+      opacity: .6;
+      vector-effect: non-scaling-stroke;
+      transition: stroke .2s, opacity .2s, stroke-width .2s;
+    }
+    .flow.control { stroke-dasharray: 7 6; }
+    .flow.active {
+      stroke: var(--flow-color, var(--blue));
+      stroke-width: 3.3;
+      opacity: 1;
+      filter: drop-shadow(0 0 3px rgba(44,100,232,.25));
+    }
+    .flow.control.active {
+      --flow-color: var(--teal);
+      stroke-dasharray: 6 5;
+      animation: dashMove .55s linear infinite;
+    }
+    .flow.return.active { --flow-color: var(--orange); }
+    .flow.store.active { --flow-color: var(--purple); }
+    @keyframes dashMove { to { stroke-dashoffset: -16; } }
+    .packet { filter: drop-shadow(0 2px 4px rgba(28,40,67,.26)); }
+
+    .map-caption {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-height: 58px;
+      padding: 11px 14px;
+      border-top: 1px solid var(--line);
+      color: var(--sub);
+      background: white;
+      font-size: 12px;
+    }
+    .map-caption strong { flex: 0 0 auto; color: var(--ink); }
+
+    .inspector { overflow: hidden; align-self: start; }
+    .step-hero { padding: 20px 20px 16px; border-bottom: 1px solid var(--line); }
+    .step-kicker { margin: 0 0 6px; color: var(--teal); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .step-hero h2 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -.02em; }
+    .plain-explain {
+      margin: 14px 0 0;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.65;
+    }
+    .inspector-section { padding: 15px 20px; border-bottom: 1px solid var(--line); }
+    .inspector-section:last-child { border-bottom: 0; }
+    .section-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .tech-detail { color: var(--sub); font-size: 12px; line-height: 1.7; }
+    .tech-detail p { margin: 0; white-space: pre-line; }
+    body.hide-tech .tech-detail, body.hide-tech .code-refs { display: none; }
+    .packet-card {
+      position: relative;
+      overflow: hidden;
+      padding: 12px;
+      border: 1px solid #dce2ed;
+      border-radius: 11px;
+      background: #f8faff;
+    }
+    .packet-card::before {
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 4px;
+      background: var(--packet-color, var(--blue));
+      content: "";
+    }
+    .packet-card strong { display: block; margin-bottom: 6px; color: var(--packet-color, var(--blue)); font-size: 12px; }
+    .packet-card pre {
+      overflow: auto;
+      margin: 0;
+      color: #34415c;
+      font-size: 10px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    .code-refs { display: flex; flex-wrap: wrap; gap: 6px; }
+    .code-ref {
+      padding: 4px 7px;
+      border-radius: 7px;
+      color: #56627a;
+      background: #f1f3f7;
+      font-family: Consolas, monospace;
+      font-size: 9px;
+    }
+    .choice-box { display: none; gap: 8px; padding-top: 10px; }
+    .choice-box.visible { display: flex; }
+    .choice-button {
+      flex: 1;
+      padding: 9px 8px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--ink);
+      background: white;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .choice-button.allow { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+    .choice-button.deny { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+    .choice-button.selected { box-shadow: inset 0 0 0 2px currentColor; }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(340px, .6fr);
+      gap: 16px;
+      padding: 0 18px 18px;
+    }
+    .state-panel, .log-panel { overflow: hidden; }
+    .state-cards {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 9px;
+      padding: 13px;
+    }
+    .state-card {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid #e1e5ed;
+      border-radius: 11px;
+      background: #fafbfc;
+      transition: border-color .2s, background .2s, transform .2s;
+    }
+    .state-card.changed {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+      transform: translateY(-2px);
+    }
+    .state-card span { display: block; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .state-card strong { display: block; overflow: hidden; margin-top: 4px; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .event-log { min-height: 214px; padding: 8px 14px 14px; }
+    .event-row {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid #edf0f5;
+      color: var(--sub);
+      font-size: 10px;
+    }
+    .event-row:last-child { border-bottom: 0; }
+    .event-row time { color: var(--muted); font-family: Consolas, monospace; }
+    .event-row.current { color: var(--ink); font-weight: 700; }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 4px 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    @media (max-width: 1180px) {
+      .stage-grid { grid-template-columns: 1fr; }
+      .inspector { display: grid; grid-template-columns: 1fr 1fr; }
+      .step-hero { grid-row: span 2; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .state-cards { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 760px) {
+      .app-shell { padding: 10px 10px 36px; }
+      .topbar { align-items: flex-start; }
+      .control-deck { position: static; grid-template-columns: 1fr; }
+      .control-buttons { display: grid; grid-template-columns: 40px 1fr 40px 40px; }
+      #techBtn { grid-column: 1 / -1; }
+      .stage-grid { padding: 10px; grid-template-columns: minmax(0, 1fr); }
+      .map-scroll { padding: 8px; }
+      .architecture { transform-origin: top left; }
+      .inspector { display: block; }
+      .dashboard-grid { padding: 0 10px 10px; }
+      .state-cards { grid-template-columns: repeat(2, 1fr); }
+      .footer { display: block; }
+      .footer span { display: block; margin-top: 5px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">G</span>
+        <span><strong>GANDER Runtime Explorer</strong></span>
+      </div>
+    </header>
+
+    <main class="demo">
+      <div class="control-deck">
+        <div>
+          <div class="progress-copy">
+            <strong id="progressTitle">系统全景</strong>
+            <span id="progressCount">0 / 11</span>
+          </div>
+          <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+        </div>
+        <div class="control-buttons">
+          <button class="control-button icon" id="prevBtn" type="button" title="上一步" aria-label="上一步">‹</button>
+          <button class="control-button primary" id="playBtn" type="button">自动播放</button>
+          <button class="control-button icon" id="nextBtn" type="button" title="下一步" aria-label="下一步">›</button>
+          <button class="control-button icon" id="resetBtn" type="button" title="回到全景" aria-label="回到全景">↺</button>
+          <button class="control-button" id="techBtn" type="button" data-active="true">技术细节：开</button>
+        </div>
+      </div>
+
+      <div class="timeline-wrap" id="timelineWrap">
+        <nav class="timeline" id="timeline" aria-label="GANDER 处理时间线"></nav>
+      </div>
+
+      <section class="stage-grid">
+        <article class="map-card">
+          <div class="panel-head">
+            <h2>系统架构与当前数据流</h2>
+            <div class="legend">
+              <span class="legend-item"><i class="legend-line on"></i>数据流（实线）</span>
+              <span class="legend-item"><i class="legend-line control on"></i>控制流（虚线）</span>
+              <span class="legend-item"><i class="legend-dot"></i>当前数据包</span>
+            </div>
+          </div>
+          <div class="map-scroll" id="mapScroll">
+            <div class="architecture" id="architecture">
+              <div class="zone zone-user"><b class="zone-title">User &amp; Environment</b><small>输入与最终反馈</small></div>
+              <div class="zone zone-front"><b class="zone-title">Front Cerebellum</b><small>实时感知、路由与自然表达</small></div>
+              <div class="zone zone-runtime"><b class="zone-title">Agent Orchestration Runtime</b><small>实时管道 + 持久化任务编排</small></div>
+              <div class="zone zone-brain"><b class="zone-title">Back Brain</b><small>Selected Worker：Reason · Retrieve · Act</small></div>
+              <span class="plane-label plane-realtime">Realtime data plane</span>
+              <span class="plane-label plane-control">Task control plane</span>
+
+              <button class="arch-node node-user" id="node-voice" data-kind="user" data-key="voice" type="button">
+                <strong>语音 / 麦克风</strong><span>PCM16 · 采集时钟</span>
+              </button>
+              <button class="arch-node node-user" id="node-screen" data-kind="user" data-key="screen" type="button">
+                <strong>摄像头 / 屏幕</strong><span>JPEG · WebP · PNG</span>
+              </button>
+              <button class="arch-node node-user" id="node-userui" data-kind="user" data-key="userui" type="button">
+                <strong>用户反馈</strong><span>语音 · 文本 · UI</span>
+              </button>
+
+              <button class="arch-node node-front" id="node-thinker" data-kind="front" data-key="thinker" type="button">
+                <strong>Thinker</strong><span>[视频][音频][Task Slate] → listen / speak / interrupt / tool</span>
+              </button>
+              <button class="arch-node node-front" id="node-talker" data-kind="front" data-key="talker" type="button">
+                <strong>Detached Talker</strong><span>文本 / 隐状态 → 流式语音</span>
+              </button>
+
+              <button class="arch-node node-runtime" id="node-transport" data-kind="runtime" data-key="transport" type="button">
+                <strong>Realtime Transport</strong><span>/ws/duplex · /ws/screen · Outbox</span>
+              </button>
+              <button class="arch-node node-runtime" id="node-asr" data-kind="runtime" data-key="asr" type="button">
+                <strong>Managed ASR</strong><span>整句转写 → 浏览器拿回文本</span>
+              </button>
+              <button class="arch-node node-runtime" id="node-bridge" data-kind="runtime" data-key="bridge" type="button">
+                <strong>TaskToolsRealtimeCoordinator</strong><span>Bind trusted turn · dispatch tool calls · inject delivery</span>
+              </button>
+              <button class="arch-node node-runtime" id="node-gateway" data-kind="runtime" data-key="gateway" type="button">
+                <strong>GanderGateway</strong><span>Track · schedule · reduce · supervise</span>
+              </button>
+              <button class="arch-node node-store" id="node-ledger" data-kind="store" data-key="ledger" type="button">
+                <strong>TaskLedger</strong><span>Project · Task · Run · Event · Delivery</span>
+              </button>
+              <button class="arch-node node-runtime" id="node-router" data-kind="runtime" data-key="router" type="button">
+                <strong>WorkerToolRouter</strong><span>MCP · run token · context_fetch</span>
+              </button>
+              <button class="arch-node node-runtime" id="node-delivery" data-kind="runtime" data-key="delivery" type="button">
+                <strong>DeliveryBroker</strong><span>pending → claimed → delivered</span>
+              </button>
+
+              <button class="arch-node node-brain" id="node-provider" data-kind="brain" data-key="provider" type="button">
+                <strong>CodexWorkerProvider</strong><span>Worker adapter · event mapping</span>
+              </button>
+              <button class="arch-node node-brain" id="node-worker" data-kind="brain" data-key="worker" type="button">
+                <strong>Selected Worker</strong><span>Codex thread / turn<br>长程推理与执行</span>
+              </button>
+              <button class="arch-node node-brain" id="node-tools" data-kind="brain" data-key="tools" type="button">
+                <strong>工具 / 服务</strong><span>File · Shell · Retrieve</span>
+              </button>
+
+              <svg class="flow-layer" id="flowLayer" viewBox="0 0 1200 660" aria-hidden="true">
+                <defs>
+                  <marker id="arrowData" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                    <path d="M0,0 L8,4 L0,8 z" fill="#8f99ab"></path>
+                  </marker>
+                  <marker id="arrowControl" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                    <path d="M0,0 L8,4 L0,8 z" fill="#8f99ab"></path>
+                  </marker>
+                </defs>
+                <path class="flow" id="flow-audio-in" data-path="M157 191 L192 191 L192 24 L456 24 L456 112 L488 112" d="M157 191 L192 191 L192 24 L456 24 L456 112 L488 112" marker-end="url(#arrowData)"/>
+                <path class="flow" id="flow-audio-thinker" data-path="M488 150 C455 150 448 196 414 196" d="M488 150 C455 150 448 196 414 196" marker-end="url(#arrowData)"/>
+                <path class="flow" id="flow-audio-asr" data-path="M157 179 L180 179 L180 12 L782 12 L782 90" d="M157 179 L180 179 L180 12 L782 12 L782 90" marker-end="url(#arrowData)"/>
+                <path class="flow" id="flow-screen" data-path="M157 278 C185 278 195 245 220 245" d="M157 278 C185 278 195 245 220 245" marker-end="url(#arrowData)"/>
+                <path class="flow" id="flow-turn" data-path="M782 170 L782 220" d="M782 170 L782 220" marker-end="url(#arrowData)"/>
+                <path class="flow control" id="flow-tool-call" data-path="M414 235 C452 235 450 258 488 258" d="M414 235 C452 235 450 258 488 258" marker-end="url(#arrowControl)"/>
+                <path class="flow control" id="flow-task-op" data-path="M575 296 L575 342" d="M575 296 L575 342" marker-end="url(#arrowControl)"/>
+                <path class="flow store" id="flow-ledger-write" data-path="M662 390 L700 390" d="M662 390 L700 390" marker-end="url(#arrowData)"/>
+                <path class="flow control" id="flow-dispatch" data-path="M662 360 C790 250 850 178 958 178" d="M662 360 C790 250 850 178 958 178" marker-end="url(#arrowControl)"/>
+                <path class="flow control" id="flow-worker-start" data-path="M1057 222 L1057 288" d="M1057 222 L1057 288" marker-end="url(#arrowControl)"/>
+                <path class="flow control" id="flow-context-call" data-path="M958 342 L920 342 L920 600 L678 600 L678 520 L662 520" d="M958 342 L920 342 L920 600 L678 600 L678 520 L662 520" marker-end="url(#arrowControl)"/>
+                <path class="flow return" id="flow-context-return" data-path="M662 560 L666 560 L666 634 L946 634 L946 396 L958 396" d="M662 560 L666 560 L666 634 L946 634 L946 396 L958 396" marker-end="url(#arrowData)"/>
+                <path class="flow control" id="flow-worker-tools" data-path="M1057 408 L1057 476" d="M1057 408 L1057 476" marker-end="url(#arrowControl)"/>
+                <path class="flow return" id="flow-worker-event" data-path="M958 310 C850 236 745 324 662 366" d="M958 310 C850 236 745 324 662 366" marker-end="url(#arrowData)"/>
+                <path class="flow control" id="flow-steer" data-path="M662 410 C820 444 880 350 958 350" d="M662 410 C820 444 880 350 958 350" marker-end="url(#arrowControl)"/>
+                <path class="flow control store" id="flow-make-delivery" data-path="M662 424 C680 460 718 474 760 500" d="M662 424 C680 460 718 474 760 500" marker-end="url(#arrowControl)"/>
+                <path class="flow return" id="flow-delivery-bridge" data-path="M874 530 L902 530 L902 270 L874 270" d="M874 530 L902 530 L902 270 L874 270" marker-end="url(#arrowData)"/>
+                <path class="flow return" id="flow-runtime-thinker" data-path="M488 278 C452 300 444 255 414 255" d="M488 278 C452 300 444 255 414 255" marker-end="url(#arrowData)"/>
+                <path class="flow" id="flow-thinker-talker" data-path="M317 286 L317 390" d="M317 286 L317 390" marker-end="url(#arrowData)"/>
+                <path class="flow return" id="flow-output" data-path="M220 438 C170 438 188 503 157 503" d="M220 438 C170 438 188 503 157 503" marker-end="url(#arrowData)"/>
+              </svg>
+            </div>
+          </div>
+          <div class="map-caption"><strong id="mapCaptionTitle">阅读提示</strong><span id="mapCaption">先看三大区：Front Cerebellum 负责实时交互，Agent Orchestration Runtime 负责绑定、追踪与隔离，Back Brain 负责长程执行。</span></div>
+        </article>
+
+        <aside class="inspector">
+          <div class="step-hero">
+            <p class="step-kicker" id="stepKicker">全景 · Overview</p>
+            <h2 id="stepTitle">系统准备就绪</h2>
+            <p class="plain-explain" id="plainExplain">一边持续聊天，一边让后台大脑办事；Runtime 确保两条线不会互相打乱。</p>
+          </div>
+          <div class="inspector-section tech-detail">
+            <div class="section-label"><span>技术说明</span><span>Technical note</span></div>
+            <p id="techExplain"></p>
+          </div>
+          <div class="inspector-section">
+            <div class="section-label"><span>当前数据包</span><span id="packetKind">—</span></div>
+            <div class="packet-card" id="packetCard">
+              <strong id="packetTitle">尚未开始</strong>
+              <pre id="packetData">点击“下一步”开始模拟</pre>
+            </div>
+            <div class="choice-box" id="choiceBox">
+              <button class="choice-button allow" id="allowBtn" type="button">allow_once · 允许一次</button>
+              <button class="choice-button deny" id="denyBtn" type="button">deny · 拒绝</button>
+            </div>
+          </div>
+          <div class="inspector-section code-refs">
+            <div class="section-label" style="width:100%; margin:0"><span>代码落点</span></div>
+            <div id="codeRefs" class="code-refs"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="state-panel">
+          <div class="panel-head"><h3>状态账本 · 当前快照</h3><span class="source-tag">TaskLedger projection</span></div>
+          <div class="state-cards" id="stateCards">
+            <div class="state-card" data-state="turn"><span>Trusted turn</span><strong id="state-turn">—</strong></div>
+            <div class="state-card" data-state="task"><span>Task</span><strong id="state-task">—</strong></div>
+            <div class="state-card" data-state="run"><span>Run</span><strong id="state-run">—</strong></div>
+            <div class="state-card" data-state="interaction"><span>Interaction</span><strong id="state-interaction">—</strong></div>
+            <div class="state-card" data-state="delivery"><span>Delivery</span><strong id="state-delivery">—</strong></div>
+            <div class="state-card" data-state="output"><span>Front Cerebellum</span><strong id="state-output">listening</strong></div>
+          </div>
+        </article>
+        <article class="log-panel">
+          <div class="panel-head"><h3>模拟事件流</h3><span class="source-tag">只显示最近 6 条</span></div>
+          <div class="event-log" id="eventLog"></div>
+        </article>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>本页面为离线教学模拟，不发送麦克风、文件或网络请求。</span>
+      <span>快捷键：← / → 分步，Space 自动播放，R 重置。</span>
+    </footer>
+  </div>
+
+  <script>
+    "use strict";
+
+    // 单页离线 Demo：所有步骤、状态和动画都由下方模拟数据驱动。
+    const steps = [
+      {
+        short: "全景",
+        kicker: "全景 · Overview",
+        title: "系统准备就绪",
+        plain: "一边持续聊天，一边让后台大脑办事；Runtime 确保两条线不会互相打乱。",
+        tech: "GANDER 由 Front Cerebellum、Agent Orchestration Runtime 和 Back Brain 三部分组成。Runtime 内又分实时数据平面和任务控制平面；前者追求低延迟，后者追求状态正确性。",
+        nodes: [],
+        flows: [],
+        captionTitle: "阅读提示",
+        caption: "先看三大区：Front Cerebellum 负责实时交互，Agent Orchestration Runtime 负责 Bind / Track / Fence，Back Brain 负责长程执行。",
+        packet: ["尚未开始", "overview", "点击“下一步”开始模拟"],
+        state: { turn: "—", task: "—", run: "—", interaction: "—", delivery: "—", output: "listening" },
+        refs: ["online_duplex.py", "task_tools_online.py", "gateway.py"],
+        logs: ["离线模拟器已初始化", "场景：把刚才的会议整理成纪要"]
+      },
+      {
+        short: "语音输入",
+        kicker: "步骤 1 · Perceive",
+        title: "用户开始说话",
+        plain: "同一段语音有两条支路：一条按每秒一小段持续喂给 Thinker，一条等整句说完才去转文字。",
+        tech: "1. Realtime Transport 把浏览器输入的音/视频帧切成 1 s 长度的因果单元送入 Thinker；\n2. Managed ASR 并行转写（整句），结果用于给浏览器显示、以及 Runtime 绑定 trusted turn。",
+        nodes: ["voice", "screen", "transport", "asr", "thinker"],
+        pulse: ["voice", "thinker"],
+        flows: ["audio-in", "audio-thinker", "audio-asr", "screen"],
+        captionTitle: "数据流",
+        caption: "两条支路节奏不同：Thinker 每 1 s 一个单元持续输入；ASR 等整句静音结束才一次性上传转写。",
+        packet: ["Audio/Video unit", "data · PCM16", "metadata: {\n  type: \"audio.frame\",\n  sequence, start_sample,\n  sample_count, captured_at_ms\n}\n重切为 16000 samples = 1000 ms 单元\n+ latest screen frame"],
+        state: { turn: "capturing", task: "—", run: "—", interaction: "—", delivery: "—", output: "listening" },
+        refs: ["online_duplex.py", "duplex_bridge.py", "app.js"],
+        logs: ["audio.frame → /ws/duplex", "PCM journal append", "Thinker 接收第 42 个 1 s 单元", "ASR 开始并行转写"]
+      },
+      {
+        short: "可信 Turn",
+        kicker: "步骤 2 · Bind",
+        title: "ASR 形成可信用户 Turn",
+        plain: "ASR 出文字 → Coordinator 校验并封装 → Gateway 转发 → TaskLedger 存档。",
+        tech: "1. Thinker 一旦输出 tool(task_start)，ASR输出的整句进入 Coordinator；\n2. Coordinator校验字段合法性（非空、长度、格式等），任一项不通过回 error，全部通过则建 TurnEnvelope；\n3. Gateway 转发，TaskLedger 存档。",
+        nodes: ["asr", "bridge", "gateway", "ledger"],
+        badges: { asr: "1", bridge: "2", gateway: "3", ledger: "4" },
+        pulse: ["bridge"],
+        flows: ["turn", "ledger-write"],
+        captionTitle: "可信边界",
+        caption: "ASR 文本不进 Thinker 输入。它经 Coordinator 绑定任务正文，再由 Gateway 记进 TaskLedger，供 Back Brain 后续按需拉取。",
+        packet: ["TurnEnvelope", "data · trusted turn", "{\n  turn_id: \"T#1\",\n  final_asr: \"把刚才的会议整理成纪要\",\n  media_refs: [screen@…, audio.pcm],\n  context_revision: 1\n}"],
+        state: { turn: "T#1 · trusted", task: "—", run: "—", interaction: "—", delivery: "—", output: "listening" },
+        refs: ["task_tools_online.py", "coordination.py", "screen.py"],
+        logs: ["ASR 完成：把刚才的会议整理成纪要", "turn.final → Bridge", "TurnEnvelope T#1 已持久化"]
+      },
+      {
+        short: "任务路由",
+        kicker: "步骤 3 · Delegate",
+        title: "Front Cerebellum 决定委派",
+        plain: "Thinker 判断这不是一句话能完成的闲聊，于是选择 task_start，把任务交给后台。",
+        tech: "Thinker 在流式单元中产生结构化 <tool_call>，包括：\n1. 动作（task_start、task_send、task_resolve）由 Runtime 预先规定，模型只能三选一；\n2. 任务名分两种情况：\n· 新建任务（task_start）→ 模型自己起名，任务正文不从模型参数取，而是稍后绑定到当前可信 turn 的 final_asr。\n· 操作已有任务（task_send、task_resolve）→ 从当前任务列表里挑名字。",
+        nodes: ["thinker", "bridge", "gateway"],
+        pulse: ["thinker"],
+        flows: ["tool-call", "task-op"],
+        captionTitle: "控制流",
+        caption: "虚线代表控制决定：Thinker 只决定“启动哪个名字的任务”，不复制或改写用户原话。",
+        packet: ["task_start", "control · tool call", "<tool_call>{\n  \"name\": \"task_start\",\n  \"arguments\": { \"name\": \"会议纪要\" }\n}</tool_call>"],
+        state: { turn: "T#1 · trusted", task: "preparing", run: "—", interaction: "—", delivery: "—", output: "tool" },
+        refs: ["tool_protocol.py", "task_tools_online.py", "lean_realtime.py"],
+        logs: ["Thinker → tool token", "observe_frontbrain 校验 task_start", "工具调用与 T#1 等待绑定"]
+      },
+      {
+        short: "建任务",
+        kicker: "步骤 4 · Track",
+        title: "Runtime 建立任务账本",
+        plain: "Runtime 用用户原话建任务，并给它准备好可追踪、可取消、可恢复的身份。",
+        tech: "1. Gateway 创建 Project、Task(queued) 与 Contract r1；\n2.任务的目标和指令都填final_asr；\n3. 建好之后立刻把创建成功的消息送回 Thinker。",
+        nodes: ["bridge", "gateway", "ledger", "thinker"],
+        pulse: ["ledger"],
+        flows: ["task-op", "ledger-write", "runtime-thinker"],
+        captionTitle: "状态变化",
+        caption: "Task 是用户可见的逻辑工作；Run 是一次具体执行。此时 Task 已存在，但 Run 还没启动。",
+        packet: ["TaskControlResult", "data + control receipt", "{\n  status: \"ok\",\n  task_ids: [\"task_meeting_01\"],\n  speech: \"会议纪要\"\n}"],
+        state: { turn: "T#1 · consumed", task: "queued", run: "—", interaction: "—", delivery: "—", output: "speaking briefly" },
+        refs: ["gateway.py:_start_task", "gateway.py:_create_task", "supervision.py:TaskLedger", "coordination.py"],
+        logs: ["assist_receipts 未命中：首次请求", "Project + Task(queued) + Contract r1", "Thinker：好的，我来整理"]
+      },
+      {
+        short: "调度执行",
+        kicker: "步骤 5 · Schedule",
+        title: "Gateway 启动 Selected Worker",
+        plain: "任务进入后台执行；前台马上恢复聊天，不必等后台大脑做完。",
+        tech: "1.Task 改成 running，新建 Run（status=running）；\n2. Gateway 给 Provider WorkerRequest包括：task_id, run_id, generation, instruction(final_asr), 上下文（仅引用清单）等；\n3. Provider 把final_asr和前后文引用给 Worker。",
+        nodes: ["gateway", "ledger", "provider", "worker"],
+        pulse: ["worker"],
+        flows: ["ledger-write", "dispatch", "worker-start"],
+        captionTitle: "控制流",
+        caption: "WorkerRequest 只带用户请求、策略和上下文清单；完整会话与媒体不会自动塞进首轮。",
+        packet: ["WorkerRequest", "control · dispatch", "{ task_id, run_id, generation: 1,\n  instruction: T#1.final_asr,\n  context_plan, policy, lineage_id }\n→ thread/start → turn/start"],
+        state: { turn: "T#1 · consumed", task: "running", run: "run_01 · running", interaction: "—", delivery: "—", output: "listening" },
+        refs: ["gateway.py:_dispatch", "gateway.py:WorkerRunChannel", "providers/codex.py"],
+        logs: ["resource_lock acquired", "Run run_01 → running", "Codex thread/start", "Codex turn/start"]
+      },
+      {
+        short: "取上下文",
+        kicker: "步骤 6 · Reason / Retrieve / Act",
+        title: "Back Brain 拉取上下文并使用工具",
+        plain: "后台大脑需要什么就自己取什么，再调用文件、命令行或检索工具完成工作。",
+        tech: "Codex 的 context_provisioning=pull。它通过 WorkerToolRouter 调用 context_fetch并绑定 task/run/generation/token，包括 realtime events、turn、任务摘要、artifact 与 WorkerEvent。工具执行发生在 Selected Worker 内。",
+        nodes: ["worker", "router", "ledger", "tools"],
+        pulse: ["worker", "tools"],
+        flows: ["context-call", "context-return", "worker-tools"],
+        captionTitle: "数据流 + 控制流",
+        caption: "context_fetch 返回数据；调用工具属于控制。Runtime 不替 Back Brain 规划具体步骤。",
+        packet: ["context_fetch response", "data · scoped context", "{ items: [\n  audio_transcript(T#1),\n  final screen frames,\n  frontbrain_reply\n], media: 3, next_cursor: null }"],
+        state: { turn: "T#1 · consumed", task: "running", run: "run_01 · running", interaction: "—", delivery: "—", output: "listening" },
+        refs: ["gateway.py:context_fetch", "worker_tool_router.py", "worker_tools.py", "lean_realtime.py"],
+        logs: ["context_fetch：拉取任务开始时快照", "Selected Worker 读取会议转写", "Selected Worker 提取行动项"]
+      },
+      {
+        short: "追加指令",
+        kicker: "步骤 7 · Revise task",
+        title: "用户边聊边修改任务",
+        plain: "后台还在工作时，用户补充“只保留行动项”；Runtime 把新要求准确送进同一个任务。",
+        tech: "新语音形成可信turn；Thinker 发动作 task_send{task:\"会议纪要\", lane:\"main\"}。运行中 Codex 支持 native steering，Gateway 经 ProviderCommand outbox 调用 turn/steer(expectedTurnId)。若 turn 已结束则新建 turn/start。",
+        nodes: ["voice", "asr", "thinker", "bridge", "gateway", "provider", "worker"],
+        pulse: ["gateway", "worker"],
+        flows: ["audio-asr", "turn", "tool-call", "task-op", "steer"],
+        captionTitle: "增量控制",
+        caption: "main 会改变主任务；fork 则创建只读、临时的 thread/fork，不改变主线。",
+        packet: ["task_send · main", "control · native steering", "T#2.final_asr = \"只保留行动项\"\nturn/steer {\n  expectedTurnId: \"codex_turn_01\",\n  input: […]\n}"],
+        state: { turn: "T#2 · consumed", task: "running · updated", run: "run_01 · running", interaction: "—", delivery: "—", output: "speaking briefly" },
+        refs: ["gateway.py:_apply_task_send", "gateway.py:_send_task", "providers/codex.py:steer", "coordination.py"],
+        logs: ["T#2：只保留行动项", "task_send(main) → ProviderCommand", "turn/steer expectedTurnId 命中"]
+      },
+      {
+        short: "中间回传",
+        kicker: "步骤 8 · Progress",
+        title: "中间结果通过 Fence 回传",
+        plain: "后台大脑汇报“已整理出 5 条行动项”；Runtime 先验明身份、记账，再等合适时机说给用户。",
+        tech: "Codex 调用 share → ProviderEvent → WorkerRunChannel 映射为 WorkerEvent(Update)。ledger.append_event 校验 generation、active_run_id、seq 与 event_id；_reduce_event 在 lean 模式产生 safe_pause Delivery。",
+        nodes: ["worker", "provider", "gateway", "ledger", "delivery"],
+        pulse: ["ledger", "delivery"],
+        flows: ["worker-event", "ledger-write", "make-delivery"],
+        captionTitle: "Fence + Delivery",
+        caption: "事件不是直接穿透到用户：只有当前活跃 Run 的、序号正确的事件才能进入 DeliveryBroker。",
+        packet: ["WorkerEvent #7", "data · progress event", "{ type: \"update\",\n  payload: { kind: \"activity\",\n    summary: \"已整理出 5 条行动项\" },\n  run_id: \"run_01\", generation: 1, seq: 7 }"],
+        state: { turn: "T#2 · consumed", task: "running · updated", run: "run_01 · seq 7", interaction: "—", delivery: "milestone · pending", output: "listening" },
+        refs: ["providers/codex.py:_accept_worker_share", "gateway.py:ingest_worker_event", "gateway.py:_reduce_event", "supervision.py:DeliveryBroker"],
+        logs: ["share(milestone) → ProviderEvent", "append_event fence：通过", "Delivery milestone → pending"]
+      },
+      {
+        short: "权限审批",
+        kicker: "步骤 9 · Resolve",
+        title: "敏感动作先向用户确认",
+        plain: "后台想写入 notes.md，必须暂停该动作并征求用户；本 Demo 可选择允许一次或拒绝。",
+        tech: "Codex requestApproval 被映射为 InteractionPayload(permission)，形成 PendingInteraction 与 interaction Delivery。用户新 turn 驱动 task_resolve；allow_once 被翻译为 accept，deny 被翻译为 decline。默认审批策略为 on-request。",
+        nodes: ["worker", "provider", "gateway", "ledger", "delivery", "bridge", "thinker", "talker", "userui"],
+        pulse: ["delivery", "userui"],
+        flows: ["worker-event", "ledger-write", "make-delivery", "delivery-bridge", "runtime-thinker", "output"],
+        captionTitle: "交互往返",
+        caption: "权限请求是一个持久化状态，不是普通聊天。未解决前，相关 run / action 会被标记为 blocked。",
+        packet: ["PendingInteraction", "control · permission", "{ kind: \"permission\",\n  prompt: \"允许写入 notes.md 吗？\",\n  choices: [\"allow_once\", \"allow_session\", \"deny\"],\n  expires_in: \"300 s\" }"],
+        state: { turn: "waiting T#3", task: "running · blocked", run: "run_01 · waiting", interaction: "permission · pending", delivery: "interaction · delivered", output: "asking user" },
+        refs: ["providers/codex.py:requestApproval", "gateway.py:_resolve_interaction", "gateway.py:_refresh_blocked", "supervision.py"],
+        logs: ["requestApproval：写入 notes.md", "PendingInteraction → pending", "Thinker：允许写入 notes.md 吗？"],
+        choice: true
+      },
+      {
+        short: "任务完成",
+        kicker: "步骤 10 · Result",
+        title: "结果归约为任务终态",
+        plain: "后台完成工作后，Runtime 把 Task 和 Run 一起结算，并生成一条“最终结果待播报”记录。",
+        tech: "turn/completed → ProviderEvent(result) → DonePayload。通过 append_event 后，_reduce_event 把 Task / Run 更新为 completed、清空 active_run_id、关闭交互，并以 terminal:{task}:{generation} 去重入队 final Delivery。",
+        nodes: ["worker", "provider", "gateway", "ledger", "delivery"],
+        pulse: ["ledger"],
+        flows: ["worker-event", "ledger-write", "make-delivery"],
+        captionTitle: "状态归约",
+        caption: "完成执行 ≠ 已经告诉用户。最终结果先进入 Delivery pending，等待安全停顿。",
+        packet: ["DonePayload", "data · terminal result", "{ status: \"completed\",\n  result: \"5 条行动项已整理…\",\n  artifacts: [\"notes.md\"] }\n→ Delivery(topic=\"final\")"],
+        state: { turn: "T#3 · consumed", task: "completed", run: "run_01 · completed", interaction: "resolved", delivery: "final · pending", output: "listening" },
+        refs: ["providers/codex.py:_iterate_events", "gateway.py:_reduce_event", "supervision.py:DeliveryBroker", "contracts.py"],
+        logs: ["turn/completed → DonePayload", "Task / Run → completed", "final Delivery → pending"]
+      },
+      {
+        short: "最终反馈",
+        kicker: "步骤 11 · Deliver result",
+        title: "Front Cerebellum 自然地告诉用户",
+        plain: "等用户和小脑都不在说话时，结果才被注入；Thinker 先整理成口语，再由 Talker 播成语音并同步显示文本。",
+        tech: "_delivery_loop 要求模型输入空闲；safe_pause 还要求 Talker 缓冲变空并且轮次结束。",
+        nodes: ["delivery", "bridge", "thinker", "talker", "userui"],
+        pulse: ["thinker", "talker", "userui"],
+        flows: ["delivery-bridge", "runtime-thinker", "thinker-talker", "output"],
+        captionTitle: "两阶段投递",
+        caption: "先 claim，真正送达再 ack；断线或失败会回 pending 重试，因此不会悄悄丢结果。",
+        packet: ["worker_delivery", "data · bounded delivery", "{ type: \"worker_delivery\",\n  task_name: \"会议纪要\",\n  topic: \"final\", status: \"completed\",\n  content: \"已整理 5 条行动项…\" }"],
+        state: { turn: "T#3 · consumed", task: "completed", run: "run_01 · completed", interaction: "resolved", delivery: "final · delivered", output: "speaking result" },
+        refs: ["task_tools_online.py:_delivery_loop", "lean_realtime.py:worker_delivery_response", "online_duplex.py:_WebSocketOutbox", "duplex_bridge.py"],
+        logs: ["safe_pause：Talker drained + turn ended", "Delivery claimed（30 s lease）", "Thinker 总结 → Talker 语音", "Outbox wait_sent → ack delivered"]
+      }
+    ];
+
+    const moduleInfo = {
+      voice: ["语音 / 麦克风", "浏览器采集 PCM16，并用 audio.frame 元数据标注采集时钟。"],
+      screen: ["摄像头 / 屏幕", "画面给 Thinker 走最新帧缓冲；给 Back Brain 走限速采样与 MediaRef。"],
+      userui: ["用户反馈", "最终可同时表现为 Talker 语音、Thinker 文本和页面 UI。"],
+      thinker: ["Thinker", "持续感知音视频，决定 listen / speak / interrupt / tool；负责任务路由与结果口语化。"],
+      talker: ["Detached Talker", "把 Thinker 文本与隐状态转换为流式语音，不参与后台任务编排。"],
+      transport: ["Realtime Transport", "FastAPI WebSocket 接入音频和画面；按 1 s 调度模型；Outbox 保证输出顺序。"],
+      asr: ["Managed ASR", "整句说完后由浏览器 POST 整段 PCM 转写（独立 HTTP 端点，不走 /ws/duplex），文本再由浏览器提交 turn.final；ASR 文本不喂给 Thinker。"],
+      bridge: ["TaskToolsRealtimeCoordinator", "把 task_* 调用绑定到可信 turn，向 Gateway 分发，并在安全时机把 Delivery 注入 Thinker。"],
+      gateway: ["GanderGateway", "持久化编排核心：任务状态、调度、Provider 能力、事件归约、权限与上下文投影。"],
+      ledger: ["TaskLedger", "每语音会话一个 SQLite；保存 Project、Task、Run、WorkerEvent、Delivery 及辅助实体。"],
+      router: ["WorkerToolRouter", "通过 MCP 暴露 context_fetch / memory_search / share，并用 run token 隔离调用。"],
+      delivery: ["DeliveryBroker", "把要告诉用户的内容持久化为 pending / claimed / delivered，支持租约、重试与去重。"],
+      provider: ["CodexWorkerProvider", "把统一 Worker 协议翻译为 Codex app-server 的 thread / turn / steer / fork。"],
+      worker: ["Selected Worker", "当前默认是 Codex；执行长程推理、任务拆解和工具调用。不是 Runtime 内的一群 Agent。"],
+      tools: ["工具 / 服务", "Back Brain 原生使用文件、Shell 和检索；另外可经 Runtime 使用 context_fetch、memory_search、share。"]
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => [...document.querySelectorAll(selector)];
+    const timeline = $("#timeline");
+    const flowLayer = $("#flowLayer");
+    let currentStep = 0;
+    let autoplay = null;
+    let permissionDecision = "allow_once";
+
+    // 建立可点击时间线。
+    steps.forEach((step, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "timeline-step";
+      button.dataset.index = index;
+      button.setAttribute("aria-label", `跳到步骤 ${index}：${step.short}`);
+      button.innerHTML = `<span class="dot">${index}</span><span>${step.short}</span>`;
+      button.addEventListener("click", () => setStep(index, true));
+      timeline.appendChild(button);
+    });
+
+    function clearPackets() {
+      flowLayer.querySelectorAll(".packet").forEach((node) => node.remove());
+    }
+
+    function addPacket(flowId, index) {
+      const path = document.getElementById(`flow-${flowId}`);
+      if (!path) return;
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.classList.add("packet");
+      circle.setAttribute("r", index === 0 ? "6" : "4.5");
+      circle.setAttribute("fill", path.classList.contains("control") ? "#087f78" : path.classList.contains("store") ? "#6d3de7" : path.classList.contains("return") ? "#d85b18" : "#2c64e8");
+      const motion = document.createElementNS("http://www.w3.org/2000/svg", "animateMotion");
+      motion.setAttribute("dur", `${1.35 + index * .12}s`);
+      motion.setAttribute("begin", `${index * .12}s`);
+      motion.setAttribute("repeatCount", "indefinite");
+      motion.setAttribute("path", path.dataset.path);
+      circle.appendChild(motion);
+      flowLayer.appendChild(circle);
+    }
+
+    function renderState(nextState, previousState = {}) {
+      Object.entries(nextState).forEach(([key, value]) => {
+        const target = document.getElementById(`state-${key}`);
+        if (!target) return;
+        target.textContent = value;
+        const card = target.closest(".state-card");
+        card.classList.toggle("changed", previousState[key] !== undefined && previousState[key] !== value);
+      });
+      window.setTimeout(() => $$(".state-card.changed").forEach((card) => card.classList.remove("changed")), 1000);
+    }
+
+    function renderLogs(stepIndex) {
+      const rows = [];
+      for (let index = Math.max(0, stepIndex - 2); index <= stepIndex; index += 1) {
+        steps[index].logs.forEach((message, eventIndex) => rows.push({ index, eventIndex, message }));
+      }
+      const recent = rows.slice(-6);
+      $("#eventLog").innerHTML = recent.map((row, i) => {
+        const tick = String(stepIndex * 4 + i + 1).padStart(2, "0");
+        const current = row.index === stepIndex ? " current" : "";
+        return `<div class="event-row${current}"><time>t+${tick}</time><span>${row.message}</span></div>`;
+      }).join("");
+    }
+
+    function renderPermissionChoice(step) {
+      const box = $("#choiceBox");
+      box.classList.toggle("visible", Boolean(step.choice));
+      $("#allowBtn").classList.toggle("selected", permissionDecision === "allow_once");
+      $("#denyBtn").classList.toggle("selected", permissionDecision === "deny");
+      if (!step.choice) return;
+      if (permissionDecision === "allow_once") {
+        step.packet[2] = "{ action: \"allow_once\" }\n→ Codex decision: \"accept\"\n→ interaction: resolving → resolved";
+        step.state.interaction = "permission · resolved";
+        step.state.run = "run_01 · running";
+        step.state.task = "running · resumed";
+        step.logs = ["requestApproval：写入 notes.md", "用户 T#3：可以", "task_resolve allow_once → accept"];
+      } else {
+        step.packet[2] = "{ action: \"deny\" }\n→ Codex decision: \"decline\"\n→ 写文件动作被阻止";
+        step.state.interaction = "permission · denied";
+        step.state.run = "run_01 · running";
+        step.state.task = "running · write blocked";
+        step.logs = ["requestApproval：写入 notes.md", "用户 T#3：拒绝", "task_resolve deny → decline"];
+      }
+    }
+
+    function syncBranchResults() {
+      const denied = permissionDecision === "deny";
+      steps[10].packet[2] = denied
+        ? "{ status: \"completed\",\n  result: \"5 条行动项已整理；文件写入被拒绝\",\n  artifacts: [] }\n→ Delivery(topic=\"final\")"
+        : "{ status: \"completed\",\n  result: \"5 条行动项已整理…\",\n  artifacts: [\"notes.md\"] }\n→ Delivery(topic=\"final\")";
+      steps[10].logs = denied
+        ? ["写入动作被拒，Worker 保留对话内结果", "turn/completed → DonePayload", "final Delivery → pending"]
+        : ["turn/completed → DonePayload", "Task / Run → completed", "final Delivery → pending"];
+      steps[11].packet[2] = denied
+        ? "{ type: \"worker_delivery\",\n  task_name: \"会议纪要\",\n  topic: \"final\", status: \"completed\",\n  content: \"行动项已整理；未写入文件\" }"
+        : "{ type: \"worker_delivery\",\n  task_name: \"会议纪要\",\n  topic: \"final\", status: \"completed\",\n  content: \"已整理 5 条行动项…\" }";
+    }
+
+    function setStep(index, userInitiated = false) {
+      const next = Math.max(0, Math.min(steps.length - 1, index));
+      const previousState = steps[currentStep]?.state || {};
+      currentStep = next;
+      syncBranchResults();
+      const step = steps[currentStep];
+      renderPermissionChoice(step);
+
+      $("#progressTitle").textContent = step.title;
+      $("#progressCount").textContent = `${currentStep} / ${steps.length - 1}`;
+      $("#progressBar").style.width = `${currentStep / (steps.length - 1) * 100}%`;
+      $("#stepKicker").textContent = step.kicker;
+      $("#stepTitle").textContent = step.title;
+      $("#plainExplain").textContent = step.plain;
+      $("#techExplain").textContent = step.tech;
+      $("#packetTitle").textContent = step.packet[0];
+      $("#packetKind").textContent = step.packet[1];
+      $("#packetData").textContent = step.packet[2];
+      $("#mapCaptionTitle").textContent = step.captionTitle;
+      $("#mapCaption").textContent = step.caption;
+      $("#codeRefs").innerHTML = step.refs.map((ref) => `<span class="code-ref">${ref}</span>`).join("");
+      $("#packetCard").style.setProperty("--packet-color", step.choice ? (permissionDecision === "deny" ? "var(--red)" : "var(--amber)") : "var(--blue)");
+
+      $$(".timeline-step").forEach((button, buttonIndex) => {
+        button.classList.toggle("active", buttonIndex === currentStep);
+        button.classList.toggle("done", buttonIndex < currentStep);
+        if (buttonIndex === currentStep) button.setAttribute("aria-current", "step");
+        else button.removeAttribute("aria-current");
+      });
+      const activeTimeline = $(`.timeline-step[data-index="${currentStep}"]`);
+      activeTimeline?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+
+      const activeNodes = new Set(step.nodes);
+      const pulseNodes = new Set(step.pulse || []);
+      const badges = step.badges || {};
+      $$(".arch-node").forEach((node) => {
+        const active = currentStep === 0 || activeNodes.has(node.dataset.key);
+        node.classList.toggle("active", currentStep !== 0 && active);
+        // 只在当前步骤点亮时显示编号，避免残留到别的步骤。
+        const badge = badges[node.dataset.key];
+        if (currentStep !== 0 && active && badge) {
+          node.dataset.badge = badge;
+        } else {
+          delete node.dataset.badge;
+        }
+        node.classList.toggle("dim", currentStep !== 0 && !active);
+        node.classList.toggle("pulse", pulseNodes.has(node.dataset.key));
+      });
+      $$(".flow").forEach((flow) => flow.classList.remove("active"));
+      clearPackets();
+      step.flows.forEach((flowId, flowIndex) => {
+        document.getElementById(`flow-${flowId}`)?.classList.add("active");
+        addPacket(flowId, flowIndex);
+      });
+
+      renderState(step.state, previousState);
+      renderLogs(currentStep);
+      $("#prevBtn").disabled = currentStep === 0;
+      $("#nextBtn").disabled = currentStep === steps.length - 1;
+
+      if (userInitiated && autoplay) stopAutoplay();
+    }
+
+    function stopAutoplay() {
+      window.clearInterval(autoplay);
+      autoplay = null;
+      $("#playBtn").textContent = "自动播放";
+      $("#playBtn").classList.add("primary");
+    }
+
+    function toggleAutoplay() {
+      if (autoplay) {
+        stopAutoplay();
+        return;
+      }
+      if (currentStep >= steps.length - 1) setStep(0);
+      $("#playBtn").textContent = "暂停";
+      $("#playBtn").classList.remove("primary");
+      autoplay = window.setInterval(() => {
+        if (currentStep >= steps.length - 1) {
+          stopAutoplay();
+          return;
+        }
+        setStep(currentStep + 1);
+      }, 3600);
+    }
+
+    $("#prevBtn").addEventListener("click", () => setStep(currentStep - 1, true));
+    $("#nextBtn").addEventListener("click", () => setStep(currentStep + 1, true));
+    $("#resetBtn").addEventListener("click", () => { stopAutoplay(); setStep(0); });
+    $("#playBtn").addEventListener("click", toggleAutoplay);
+    $("#techBtn").addEventListener("click", () => {
+      document.body.classList.toggle("hide-tech");
+      const visible = !document.body.classList.contains("hide-tech");
+      $("#techBtn").dataset.active = String(visible);
+      $("#techBtn").textContent = `技术细节：${visible ? "开" : "关"}`;
+    });
+
+    $("#allowBtn").addEventListener("click", () => {
+      permissionDecision = "allow_once";
+      setStep(9);
+    });
+    $("#denyBtn").addEventListener("click", () => {
+      permissionDecision = "deny";
+      setStep(9);
+    });
+
+    // 点击模块时，在图下注释区显示模块职责；切换步骤会恢复步骤解释。
+    $$(".arch-node").forEach((node) => {
+      node.addEventListener("click", () => {
+        const [title, text] = moduleInfo[node.dataset.key];
+        $("#mapCaptionTitle").textContent = title;
+        $("#mapCaption").textContent = text;
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.target.matches("button, input, select, textarea")) return;
+      if (event.key === "ArrowRight") setStep(currentStep + 1, true);
+      if (event.key === "ArrowLeft") setStep(currentStep - 1, true);
+      if (event.key === " ") { event.preventDefault(); toggleAutoplay(); }
+      if (event.key.toLowerCase() === "r") { stopAutoplay(); setStep(0); }
+    });
+
+    // 在窄屏下自动把大图缩放到可用宽度，仍允许横向滚动查看细节。
+    // 大图保持原始尺寸，窄屏改用横向滚动查看，避免缩放到无法辨认。
+    function fitArchitecture() {
+      const scroll = $("#mapScroll");
+      scroll.style.height = "";
+      scroll.style.overflowX = "auto";
+    }
+    window.addEventListener("resize", fitArchitecture);
+    fitArchitecture();
+    setStep(0);
+  </script>
+</body>
+</html>
